@@ -6,7 +6,7 @@ import pandas as pd
 
 # 1. 페이지 설정
 st.set_page_config(page_title="MKT Performance AI Analyst", layout="wide")
-st.title("🚀 마케팅 성과 상세 분석기 (컬럼 매핑 최적화)")
+st.title("🚀 마케팅 성과 상세 분석기")
 
 # 2. 클라이언트 설정 (캐싱)
 @st.cache_resource
@@ -41,12 +41,16 @@ SYSTEM_PROMPT = f"""너는 BigQuery 전문가이자 마케팅 분석가야.
    - ymdkst는 cohort_date이고, revenue은 해당 날짜의 매출을 의미해.
    - 비용(Spend/Cost)은 `cost_cohort` 컬럼을 사용해라.
    - 시간 데이터는 `ymdkst` (DATE 타입)를 사용해라.
+   - 캠페인은 campaign 컬럼을 사용하라.
 3. 절대 대괄호([])를 쓰지 말고 백틱(`)을 사용해라.
 4. SQL 내부에 한글 주석을 달지 마라.
 5. 결과는 반드시 ```sql [코드] ``` 형식으로 출력해라.
 6. 모든 응답의 언어는 기본적으로 한국어를 사용하며, 고유 명사의 경우 영어를 허용한다.
 7. 절대 한자(漢字)를 섞어서 사용하지 마라.
-8. 캠페인은 campaign 컬럼을 사용하라.
+8. 숫자는 지수로 아래와 같이 표기하며, 소숫점은 버린다.
+  - 1,000 = 1천,
+  - 10,000 = 1만
+  - 150,000,000 = 1.5억
 9. **나눗셈 오류 방지**: ROAS, CTR 등 모든 나눗셈 연산 시 반드시 `SAFE_DIVIDE(분자, 분모)` 함수를 사용해라. 절대 `/` 기호를 직접 쓰지 마라.
    - 예: `SAFE_DIVIDE(SUM(revenue0), SUM(spend0))`
 """
