@@ -44,7 +44,7 @@ if prompt := st.chat_input("질문을 입력하세요"):
         with st.status("BigQuery에서 데이터를 조회하는 중..."):
             try:
                 # 쿼리 실행
-                query = "SELECT * FROM `com2us-bigquery.MKT_AI.cv_creative_image_features` LIMIT 5"
+                query = "SELECT * FROM `com2us-bigquery.MKT_AI.cv_creative_image_features`"
                 df = client_bq.query(query).to_dataframe()
                 
                 st.write("조회된 데이터 샘플:", df)
