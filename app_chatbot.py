@@ -95,7 +95,8 @@ if prompt := st.chat_input("질문을 입력하세요 (예: tone_dark_ratio가 �
             
             with st.status("BigQuery 실행 중..."):
                 try:
-                    df = client_bq.query(sql).to_dataframe()
+                    query_job = client_bq.query(sql)
+                    df = query_job.result().to_dataframe(create_bqstorage_client=False)
                     st.dataframe(df)
                     
                     # 데이터 기반 요약 요청
