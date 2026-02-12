@@ -5,8 +5,8 @@ from openai import OpenAI
 import pandas as pd
 
 # 1. 페이지 설정
-st.set_page_config(page_title="MKT Performance AI", layout="wide")
-st.title("🚀 마케팅 성과 분석기 (DATE 타입 최적화)")
+st.set_page_config(page_title="MKT Performance AI Analyst", layout="wide")
+st.title("🚀 마케팅 성과 상세 분석기 (컬럼 매핑 최적화)")
 
 # 2. 클라이언트 설정 (캐싱)
 @st.cache_resource
@@ -28,19 +28,22 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
     st.info("대상 테이블: `com2us-bigquery.MKT_AI.marketing_performance`")
-    st.write("참고: `ymdkst` 컬럼은 이미 DATE/TIMESTAMP 형식이므로 별도 변환이 필요 없습니다.")
+    st.write("💡 팁: 컬럼명 뒤에 '0'이 붙는 경우가 많으니 확인 후 질문해 주세요.")
 
-# 4. 시스템 프롬프트 (DATE 타입 대응 및 문법 고정)
+# 4. 시스템 프롬프트 (정확한 컬럼 매핑 추가)
 TABLE_ID = "com2us-bigquery.MKT_AI.marketing_performance"
 
-SYSTEM_PROMPT = f"""너는 BigQuery 전문가야.
-[필수 규칙]
+SYSTEM_PROMPT = f"""너는 BigQuery 전문가이자 마케팅 분석가야.
+[필수 SQL 규칙]
 1. 테이블명: `{TABLE_ID}`
-2. 컬럼명: `ymdkst` (이 컬럼은 이미 DATE 혹은 TIMESTAMP 타입이다).
-3. **중요**: `ymdkst`에 `PARSE_TIMESTAMP` 함수를 절대 사용하지 마라. 이미 날짜 형식이므로 그대로 사용하거나 필요한 경우 `CAST(ymdkst AS TIMESTAMP)`만 사용해라.
-4. 테이블/컬럼명을 감쌀 때 절대 대괄호([])를 쓰지 말고 백틱(`)을 사용해라.
-5. SQL 내부에 한글 주석을 달지 마라.
-6. 결과는 반드시 ```sql [코드] ``` 형식으로 출력해라.
+2. **중요 컬럼 매핑**:
+   - 매출/수익(Revenue)은 반드시 `revenue0` 컬럼을 사용해라.
+   - 비용(Spend/Cost)은 `spend0` 컬럼을 사용해라.
+   - 클릭(Click)은 `click0` 컬럼을 사용해라.
+   - 시간 데이터는 `ymdkst` (DATE 타입)를 사용해라.
+3. 절대 대괄호([])를 쓰지 말고 백틱(`)을 사용해라.
+4. SQL 내부에 한글 주석을 달지 마라.
+5. 결과는 반드시 ```sql [코드] ``` 형식으로 출력해라.
 """
 
 if "messages" not in st.session_state:
@@ -53,7 +56,7 @@ for message in st.session_state.messages:
             st.markdown(message["content"])
 
 # 5. 메인 로직
-if prompt := st.chat_input("질문을 입력하세요 (예: 날짜별 spend와 click 추이를 그래프로 보여줘)"):
+if prompt := st.chat_input("질문을 입력하세요 (예: 날짜별 revenue0 추이를 그래프로 보여줘)"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -75,26 +78,23 @@ if prompt := st.chat_input("질문을 입력하세요 (예: 날짜별 spend와 c
                 sql = ai_answer.split("```sql")[1].split("```")[0].strip()
                 
                 with st.status("BigQuery 분석 중..."):
-                    # 2단계: 데이터 조회 (Storage API 미사용 옵션으로 권한 에러 방지)
                     query_job = client_bq.query(sql)
                     df = query_job.result().to_dataframe(create_bqstorage_client=False)
                 
                 if not df.empty:
                     st.subheader("📈 시각화 분석")
                     
-                    # 시계열 그래프 로직 (날짜 형식 유연하게 처리)
                     try:
-                        # ymdkst 또는 시간 관련 컬럼 자동 감지
+                        # 시계열 감지 및 그래프 생성
                         time_cols = [c for c in df.columns if any(k in c.lower() for k in ['ymdkst', 'time', 'date', 'dt'])]
                         if time_cols:
                             t_col = time_cols[0]
                             df[t_col] = pd.to_datetime(df[t_col], errors='coerce')
                             df = df.dropna(subset=[t_col]).sort_values(t_col)
-                            # 숫자형 데이터만 그래프로 표시
                             st.line_chart(df.set_index(t_col).select_dtypes(include=['number']))
                         elif len(df.columns) >= 2:
                             st.bar_chart(data=df, x=df.columns[0], y=df.columns[1:])
-                    except Exception as chart_err:
+                    except Exception:
                         st.info("데이터 구조상 자동 그래프 생성이 어렵습니다. 표 데이터를 확인해 주세요.")
 
                     # 상세 데이터 표 출력
@@ -102,7 +102,6 @@ if prompt := st.chat_input("질문을 입력하세요 (예: 날짜별 spend와 c
                     st.dataframe(df, use_container_width=True)
 
                     # 3단계: AI 요약
-                    # 토큰 절약을 위해 head(5)만 전달
                     summary_res = client_ai.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=[{"role": "user", "content": f"데이터 결과 요약: {df.head(5).to_string()}"}]
