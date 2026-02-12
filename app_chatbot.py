@@ -45,7 +45,7 @@ SYSTEM_PROMPT = f"""너는 BigQuery 전문가이자 마케팅 분석가야.
 4. SQL 내부에 한글 주석을 달지 마라.
 5. 결과는 반드시 ```sql [코드] ``` 형식으로 출력해라.
 6. 한자를 사용하지 말아라.
-7. 캠페인은 campaign_name 컬럼을 사용하라.
+7. 캠페인은 campaign 컬럼을 사용하라.
 """
 
 if "messages" not in st.session_state:
