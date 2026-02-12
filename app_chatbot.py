@@ -27,7 +27,7 @@ st.title("BigQuery 데이터 챗봇 📊")
 if prompt := st.chat_input("질문을 입력하세요"):
     # 예: 사용자가 '데이터 보여줘'라고 하면 특정 쿼리 실행
     if "매출" in prompt:
-        df = run_query("SELECT date, sales FROM `your_project.your_dataset.sales_table` LIMIT 10")
+        df = run_query("SELECT * FROM `com2us-bigquery.MKT_AI.cv_creative_image_features` ")
         st.write("최근 매출 데이터입니다:", df)
         
         # 데이터를 텍스트로 변환해 AI에게 설명 부탁하기
