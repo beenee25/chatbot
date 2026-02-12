@@ -4,18 +4,17 @@ from google.cloud import bigquery
 from openai import OpenAI
 import pandas as pd
 
-# 페이지 설정
-st.set_page_config(page_title="Com2uS AI Analyst", layout="wide")
-st.title("🎨 Com2uS 이미지 피처 분석 챗봇")
+# 1. 페이지 설정
+st.set_page_config(page_title="Com2uS BigData Analyst", layout="wide")
+st.title("📊 Com2uS 대규모 피처 분석기")
 
-# 1. 클라이언트 설정 (캐싱)
+# 2. 클라이언트 설정 (캐싱)
 @st.cache_resource
 def get_clients():
-    # BigQuery 설정 (Secrets에 gcp_service_account 필수)
+    # Secrets에 gcp_service_account와 GROQ_API_KEY가 등록되어 있어야 합니다.
     credentials = service_account.Credentials.from_service_account_info(st.secrets["gcp_service_account"])
     bq_client = bigquery.Client(credentials=credentials, project=credentials.project_id)
     
-    # Groq 설정 (Secrets에 GROQ_API_KEY 필수)
     ai_client = OpenAI(
         base_url="https://api.groq.com/openai/v1",
         api_key=st.secrets["GROQ_API_KEY"]
@@ -24,30 +23,49 @@ def get_clients():
 
 client_bq, client_ai = get_clients()
 
-# 2. 시스템 프롬프트 설정 (AI 거절 방지용 강한 지침)
+# 3. 사이드바: 550개 컬럼 중 원하는 컬럼 찾기 기능
+with st.sidebar:
+    st.header("🔍 컬럼 사전 검색")
+    st.info("550개의 컬럼 중 정확한 이름을 확인하세요.")
+    search_keyword = st.text_input("찾고 싶은 키워드 (예: ratio, score, dark)")
+    
+    if search_keyword:
+        col_search_query = f"""
+            SELECT column_name, data_type 
+            FROM `com2us-bigquery.MKT_AI.INFORMATION_SCHEMA.COLUMNS` 
+            WHERE table_name = 'cv_creative_image_features' 
+            AND (column_name LIKE '%{search_keyword}%')
+            LIMIT 20
+        """
+        try:
+            found_cols = client_bq.query(col_search_query).to_dataframe()
+            if not found_cols.empty:
+                st.dataframe(found_cols, hide_index=True)
+            else:
+                st.warning("해당 키워드가 포함된 컬럼이 없습니다.")
+        except Exception as e:
+            st.error(f"검색 오류: {e}")
+
+# 4. 시스템 프롬프트 (전략적 지침)
 TABLE_ID = "com2us-bigquery.MKT_AI.cv_creative_image_features"
 SYSTEM_MESSAGE = {
     "role": "system",
-    "content": f"""너는 'BigQuery SQL 생성 전용' AI이다. 
-    사용자가 데이터 분석을 요청하면 '데이터가 없다'는 말을 절대 하지 마라. 
-    너의 유일한 임무는 제공된 스키마를 사용하여 유효한 SQL 쿼리를 생성하는 것이다.
+    "content": f"""너는 BigQuery SQL 생성 전문가이다. 
+    이 테이블은 컬럼이 550개이므로, 존재하지 않는 컬럼명을 추측하지 마라.
 
-    [데이터베이스 정보]
-    - 프로젝트: com2us-bigquery
-    - 테이블명: `{TABLE_ID}`
-    - 주요 컬럼: 
-        1. image_name (STRING) - 이미지 파일 이름
-        2. tone_dark_ratio (FLOAT64) - 이미지의 어두운 톤 비율
-
-
-    [답변 규칙]
-    1. 반드시 SQL 코드를 ```sql [쿼리] ``` 블록 안에 포함시켜라.
-    2. SQL 내부에는 한글 주석을 달지 마라. (Syntax Error 방지)
-    3. 데이터가 실제로 존재하는지는 시스템이 판단하니, 너는 쿼리 생성에만 집중해라.
+    [핵심 규칙]
+    1. 사용자가 언급한 단어와 가장 유사한 영문 컬럼명을 사용하여 SQL을 작성해라.
+    2. 만약 컬럼명이 확실하지 않다면, 사용자에게 사이드바에서 컬럼을 검색해달라고 요청하거나, 
+       아래 쿼리를 통해 직접 컬럼 목록을 확인하라고 답변해라.
+       ```sql
+       SELECT column_name FROM `com2us-bigquery.MKT_AI.INFORMATION_SCHEMA.COLUMNS` WHERE table_name = 'cv_creative_image_features' AND column_name LIKE '%키워드%'
+       ```
+    3. 결과는 반드시 ```sql [코드] ``` 블록을 사용하고, 한글 주석은 절대 달지 마라.
+    4. 테이블명: `{TABLE_ID}`
     """
 }
 
-# 대화 기록 초기화 및 출력
+# 대화 기록 관리
 if "messages" not in st.session_state:
     st.session_state.messages = [SYSTEM_MESSAGE]
 
@@ -56,59 +74,44 @@ for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 3. 사용자 입력 및 메인 로직
-if prompt := st.chat_input("질문을 입력하세요 (예: tone_dark_ratio가 높은 순으로 5개 보여줘)"):
-    # 사용자 메시지 표시
+# 5. 메인 채팅 로직
+if prompt := st.chat_input("질문을 입력하세요 (예: tone_dark_ratio가 높은 이미지 5개)"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        # 1단계: AI에게 SQL 생성 요청
+        # AI에게 SQL 생성 요청
         response = client_ai.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=st.session_state.messages,
-            temperature=0  # 정확도를 위해 0으로 설정
+            temperature=0
         )
         ai_answer = response.choices[0].message.content
         
-        # 2단계: SQL 추출 및 실행
+        # SQL 블록이 포함되어 있는지 확인
         if "```sql" in ai_answer:
             sql = ai_answer.split("```sql")[1].split("```")[0].strip()
             
-            with st.status("BigQuery 분석 중..."):
+            with st.status("BigQuery 실행 중..."):
                 try:
-                    # 실제 쿼리 실행
                     df = client_bq.query(sql).to_dataframe()
+                    st.dataframe(df)
                     
-                    if not df.empty:
-                        st.dataframe(df) # 결과 표 출력
-                        
-                        # 3단계: 결과를 바탕으로 최종 요약
-                        analysis_prompt = f"조회된 데이터 결과입니다:\n{df.head(10).to_string()}\n위 데이터를 바탕으로 질문에 대한 최종 답변을 한글로 작성해줘."
-                        
-                        # 요약을 위한 임시 메시지 구성
-                        summary_res = client_ai.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
-                            messages=[
-                                SYSTEM_MESSAGE,
-                                {"role": "user", "content": prompt},
-                                {"role": "assistant", "content": ai_answer},
-                                {"role": "user", "content": analysis_prompt}
-                            ]
-                        )
-                        final_text = summary_res.choices[0].message.content
-                        st.markdown("---")
-                        st.markdown(final_text)
-                        st.session_state.messages.append({"role": "assistant", "content": f"{ai_answer}\n\n{final_text}"})
-                    else:
-                        st.warning("쿼리 결과 데이터가 없습니다.")
-                        st.session_state.messages.append({"role": "assistant", "content": ai_answer})
-                        
+                    # 데이터 기반 요약 요청
+                    summary_prompt = f"조회된 데이터 샘플: {df.head(5).to_string()}\n\n이 데이터를 바탕으로 한글로 요약 답변해줘."
+                    summary_res = client_ai.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=[{"role": "user", "content": summary_prompt}]
+                    )
+                    final_text = summary_res.choices[0].message.content
+                    st.markdown(final_text)
+                    st.session_state.messages.append({"role": "assistant", "content": f"{ai_answer}\n\n{final_text}"})
                 except Exception as e:
-                    st.error(f"SQL 실행 중 오류 발생: {e}")
-                    st.code(sql) # 에러 난 쿼리 확인용
+                    st.error(f"SQL 에러 발생: {e}")
+                    st.info("왼쪽 사이드바에서 정확한 컬럼명을 검색해 보세요.")
+                    st.code(sql)
         else:
-            # SQL이 생성되지 않은 일반 답변인 경우
+            # SQL이 없는 일반 대화
             st.markdown(ai_answer)
             st.session_state.messages.append({"role": "assistant", "content": ai_answer})
