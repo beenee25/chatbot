@@ -37,8 +37,8 @@ SYSTEM_PROMPT = f"""너는 BigQuery 전문가이자 마케팅 분석가야.
 [필수 SQL 규칙]
 1. 테이블명: `{TABLE_ID}`
 2. **중요 컬럼 매핑**:
-   - 매출/수익(Revenue)은 반드시 `revenue{n}` 컬럼을 사용해라.
-   - ymdkst는 cohort_date이고, revenue{n}은 해당 날짜의 매출을 의미해.
+   - 매출/수익(Revenue)은 revenue0, revenue7, revenue14 등이 있으며 cohort_date로부터 n일차의 누적된 매출이다.
+   - ymdkst는 cohort_date이고, revenue은 해당 날짜의 매출을 의미해.
    - 비용(Spend/Cost)은 `cost` 컬럼을 사용해라.
    - 시간 데이터는 `ymdkst` (DATE 타입)를 사용해라.
 3. 절대 대괄호([])를 쓰지 말고 백틱(`)을 사용해라.
