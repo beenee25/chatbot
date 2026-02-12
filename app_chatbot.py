@@ -21,11 +21,8 @@ client_bq, client_ai = get_clients()
 TABLE_SCHEMA = """
 Table Name: `com2us-bigquery.MKT_AI.cv_creative_image_features`
 Columns:
-- image_id: 이미지 고유 ID
-- feature_vector: 이미지 특징 벡터
-- upload_date: 업로드 날짜
-- performance_score: 성과 점수 (수치)
-- category: 이미지 카테고리 (예: 캐릭터, 배경, UI)
+- image_name: 이미지 고유 ID
+- tone_dark_ratio: 어두운 톤 비율 (0~1 사이 수치))
 """
 
 if "messages" not in st.session_state:
