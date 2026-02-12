@@ -38,8 +38,7 @@ SYSTEM_MESSAGE = {
     - 주요 컬럼: 
         1. image_name (STRING) - 이미지 파일 이름
         2. tone_dark_ratio (FLOAT64) - 이미지의 어두운 톤 비율
-        3. performance_score (FLOAT64) - 성과 점수
-        4. upload_date (DATE) - 업로드 날짜
+
 
     [답변 규칙]
     1. 반드시 SQL 코드를 ```sql [쿼리] ``` 블록 안에 포함시켜라.
