@@ -1,10 +1,14 @@
 import streamlit as st
 from openai import OpenAI
 
-st.title("나의 AI 챗봇 🤖")
+st.title("Groq 기반 초고속 챗봇 ⚡")
 
-# 1. API 키 설정 (Streamlit Secrets에서 불러오기)
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# 1. API 키 및 Base URL 설정
+# Streamlit Secrets에 GROQ_API_KEY라는 이름으로 키를 저장하세요.
+client = OpenAI(
+    base_url="https://api.groq.com/openai/v1",
+    api_key=st.secrets["GROQ_API_KEY"]
+)
 
 # 2. 대화 기록 초기화
 if "messages" not in st.session_state:
@@ -24,9 +28,9 @@ if prompt := st.chat_input("메시지를 입력하세요"):
 
     # 5. AI 응답 생성 및 표시
     with st.chat_message("assistant"):
-        # 스트리밍 효과 구현
+        # Groq의 Llama 3 모델 사용
         stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="llama-3.3-70b-versatile", 
             messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
             stream=True,
         )
