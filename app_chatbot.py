@@ -32,7 +32,7 @@ with st.sidebar:
 
 # 4. 시스템 프롬프트 (BigQuery 문법 및 ymdkst 처리 강화)
 # TABLE_ID는 실제 환경에 맞춰 수정하세요.
-TABLE_ID = "com2us-bigquery.MKT_AI.marketing_performance"
+TABLE_ID = "com2us-bigquery.MKT_AI.dummy_sales_data"
 
 SYSTEM_PROMPT = f"""너는 BigQuery SQL 전문가이자 마케팅 데이터 분석가야.
 [필수 SQL 규칙]
