@@ -46,6 +46,8 @@ SYSTEM_PROMPT = f"""너는 BigQuery 전문가이자 마케팅 분석가야.
 5. 결과는 반드시 ```sql [코드] ``` 형식으로 출력해라.
 6. 한자를 사용하지 말아라.
 7. 캠페인은 campaign 컬럼을 사용하라.
+8. **나눗셈 오류 방지**: ROAS, CTR 등 모든 나눗셈 연산 시 반드시 `SAFE_DIVIDE(분자, 분모)` 함수를 사용해라. 절대 `/` 기호를 직접 쓰지 마라.
+   - 예: `SAFE_DIVIDE(SUM(revenue0), SUM(spend0))`
 """
 
 if "messages" not in st.session_state:
