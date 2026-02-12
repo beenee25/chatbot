@@ -57,6 +57,7 @@ SYSTEM_PROMPT = f"""너는 BigQuery 전문가이자 마케팅 분석가야.
    - 예: `SAFE_DIVIDE(SUM(revenue0), SUM(spend0))`
 10. int, float 컬럼의 Nan 값 처리는 `IFNULL(컬럼명, 0)`을 사용하고, string 컬럼이 Nan 값인 경우는 분석에서 제외하라.
 11. appidgroup like '%smon%' = 서머너즈워, '%cok%' = 컴투스톡, '%ml%' = 머신러닝 등으로 필터링할 수 있다.
+12. **중첩 집계 금지**: `SUM(SUM(...))`와 같이 집계 함수 안에 집계 함수를 넣지 마라.
 """
 
 if "messages" not in st.session_state:
