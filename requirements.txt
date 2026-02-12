@@ -1,2 +1,5 @@
 openai
 streamlit
+google-cloud-bigquery
+google-cloud-bigquery-storage
+pandas-gbq

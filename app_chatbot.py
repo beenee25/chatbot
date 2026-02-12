@@ -1,5 +1,40 @@
 import streamlit as st
 from openai import OpenAI
+import streamlit as st
+from google.oauth2 import service_account
+from google.cloud import bigquery
+from openai import OpenAI
+
+# 1. BigQuery 클라이언트 설정
+@st.cache_resource # 매번 연결하지 않도록 캐싱
+def get_bigquery_client():
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    return bigquery.Client(credentials=credentials, project=credentials.project_id)
+
+client_bq = get_bigquery_client()
+client_ai = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=st.secrets["GROQ_API_KEY"])
+
+# 2. 데이터 조회 함수
+def run_query(query):
+    query_job = client_bq.query(query)
+    return query_job.to_dataframe()
+
+# --- 채팅 UI 부분 ---
+st.title("BigQuery 데이터 챗봇 📊")
+
+if prompt := st.chat_input("질문을 입력하세요"):
+    # 예: 사용자가 '데이터 보여줘'라고 하면 특정 쿼리 실행
+    if "매출" in prompt:
+        df = run_query("SELECT date, sales FROM `your_project.your_dataset.sales_table` LIMIT 10")
+        st.write("최근 매출 데이터입니다:", df)
+        
+        # 데이터를 텍스트로 변환해 AI에게 설명 부탁하기
+        prompt = f"다음 데이터프레임 내용을 요약해줘: {df.to_string()}"
+    
+
+
 
 st.title("Groq 기반 초고속 챗봇 ⚡")
 
