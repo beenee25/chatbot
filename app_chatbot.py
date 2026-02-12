@@ -27,7 +27,7 @@ with st.sidebar:
     if st.button("🔄 대화 기록 초기화"):
         st.session_state.messages = []
         st.rerun()
-    st.info("대상 테이블: `com2us-bigquery.MKT_AI.marketing_performance` (예시)")
+    st.info("대상 테이블: `com2us-bigquery.MKT_AI.dummy_sales_data`")
     st.write("컬럼 구성: ymdkst, title, spend, click, conversion 등")
 
 # 4. 시스템 프롬프트 (BigQuery 문법 및 ymdkst 처리 강화)
